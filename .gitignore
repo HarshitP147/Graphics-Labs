@@ -8,3 +8,5 @@ cmake-debug-build/
 *.zip
 
 __MACOSX
+
+.cache/
