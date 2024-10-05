@@ -157,6 +157,8 @@ struct Box
 {
 	glm::vec3 position; // Position of the box
 	glm::vec3 scale;	// Size of the box in each axis
+	glm::vec3 axes;		// Axes about whic the cube is to be rotated
+	float angle;		// Angle of rotation
 
 	GLfloat vertex_buffer_data[72] = {
 		// Vertex definition for a canonical box
@@ -386,11 +388,13 @@ struct Box
 	GLuint mvpMatrixID;
 	GLuint programID;
 
-	void initialize(glm::vec3 position, glm::vec3 scale)
+	void initialize(glm::vec3 position, glm::vec3 scale, glm::vec3 axes = glm::vec3(1, 1, 1), float angle = 0.0f)
 	{
 		// Define scale of the box geometry
 		this->position = position;
 		this->scale = scale;
+		this->axes = axes;
+		this->angle = angle;
 
 		// Create a vertex array object
 		glGenVertexArrays(1, &vertexArrayID);
@@ -446,9 +450,8 @@ struct Box
 		// Scale the box along each axis
 		modelMatrix = glm::scale(modelMatrix, scale);
 
-		glm::vec3 axis(0.0f,0.0f,0.1f); // (x,y,z) ->
-
-		modelMatrix = glm::rotate(modelMatrix,glm::radians(-45.0f),axis);
+		// modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), axes);
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(angle), axes);
 
 		// TODO: Set model-view-projection matrix
 		glm::mat4 mvp = cameraMatrix * modelMatrix;
@@ -525,9 +528,47 @@ int main(void)
 
 	// A default box
 	Box mybox;
-	mybox.initialize(glm::vec3(0, 0, 0),   // translation
-					 glm::vec3(30,30, 30) // scale
+	mybox.initialize(glm::vec3(0, 0, 0),		  // translation
+					 glm::vec3(30, 30, 30),		  // scale
+					 glm::vec3(0.0f, 1.0f, 0.0f), // rotation axes
+					 45.0f						  // angle of rotation
 	);
+
+	int k = 80;
+	double sqrt2 = sqrt(2.0f);
+	double sqrt3 = sqrt(3.0f);
+	double k_div_root2 = k / sqrt2;
+	double k_div_root3 = k / sqrt3;
+
+	// some more boxes
+	// All the smaller boxes are rotated the same
+	glm::vec3 scale(6, 6, 6);
+	glm::vec3 zAxisRotate(0, 0, 1);
+	float angle = 45.0f;
+
+	Box box1;
+	box1.initialize(glm::vec3(0, k, 0), scale, zAxisRotate, angle);
+
+	Box box2;
+	box2.initialize(glm::vec3(-k_div_root2, 0, k_div_root2), scale, zAxisRotate, angle);
+
+	Box box3;
+	box3.initialize(glm::vec3(0, -k, 0), scale, zAxisRotate, angle);
+
+	Box box4;
+	box4.initialize(glm::vec3(k_div_root2, 0, -k_div_root2), scale, zAxisRotate, angle);
+
+	Box box5;
+	box5.initialize(glm::vec3(-k_div_root3, k_div_root3, k_div_root3), scale, zAxisRotate, angle);
+
+	Box box6;
+	box6.initialize(glm::vec3(-k_div_root3, -k_div_root3, k_div_root3), scale, zAxisRotate, angle);
+
+	Box box7;
+	box7.initialize(glm::vec3(k_div_root3, -k_div_root3, -k_div_root3), scale, zAxisRotate, angle);
+
+	Box box8;
+	box8.initialize(glm::vec3(k_div_root3, k_div_root3, -k_div_root3), scale, zAxisRotate, angle);
 
 	// TODO: Prepare a perspective camera
 	// ------------------------------------
@@ -551,6 +592,15 @@ int main(void)
 
 		// Render the box
 		mybox.render(vp);
+
+		box1.render(vp);
+		box2.render(vp);
+		box3.render(vp);
+		box4.render(vp);
+		box5.render(vp);
+		box6.render(vp);
+		box7.render(vp);
+		box8.render(vp);
 
 		// Swap buffers
 		glfwSwapBuffers(window);
