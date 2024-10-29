@@ -6,8 +6,8 @@
 #include <render/shader.h>
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb/stb_image.h>
 #include <bits/stdc++.h>
+#include <stb/stb_image.h>
 
 #include <iostream>
 #include <string>
@@ -502,6 +502,7 @@ struct Building {
     }
 };
 
+
 int main() {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -552,24 +553,25 @@ int main() {
 
     srand(time(0)); // Seed random number generator
 
-    for (int i = 0; i < 30; ++i) {
+    for (int i = -10; i < 10; i += 2.5) {
+        for (int j = -10; j < 10; j += 2.5) {
 
-        // Random height multiplier for variation in building height
-        float heightMultiplier = 1.0f + ((float)rand() / RAND_MAX * 8.0f);
+            // Random height multiplier for variation in building height
+            float heightMultiplier = 1.0f + ((float)rand() / RAND_MAX * 8.0f);
 
-        // Randomly select one of the facade textures (0 to 5)
-        int facadeIndex = rand() % 6;
-        std::string texturePath = "../lab2/facade" + std::to_string(facadeIndex) + ".jpg";
-        char* texturePathChar = new char[texturePath.size() + 1];
-        std::strcpy(texturePathChar, texturePath.c_str());
-        // Remember to delete[] texturePathChar when done to avoid memory leaks.
+            // Randomly select one of the facade textures (0 to 5)
+            int facadeIndex = rand() % 6;
+            std::string texturePath = "../lab2/facade" + std::to_string(facadeIndex) + ".jpg";
+            char *texturePathChar = new char[texturePath.size() + 1];
+            std::strcpy(texturePathChar, texturePath.c_str());
+            // Remember to delete[] texturePathChar when done to avoid memory leaks.
 
-
-        // Initialize building and push to vector
-        Building b;
-        // b.initialize(glm::vec3(x,0 , z), glm::vec3(baseSize, heightMultiplier * baseSize, baseSize), texturePathChar);
-        buildings.push_back(b);
-        delete[] texturePathChar;
+            // Initialize building and push to vector
+            Building b;
+            b.initialize(glm::vec3(i, 0, j), glm::vec3(baseSize, heightMultiplier * baseSize, baseSize), texturePathChar);
+            buildings.push_back(b);
+            delete[] texturePathChar;
+        }
     }
 
     do {
@@ -594,7 +596,6 @@ int main() {
     for (auto b : buildings) {
         b.cleanup();
     }
-
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
