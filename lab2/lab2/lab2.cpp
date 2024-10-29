@@ -28,6 +28,77 @@ static float viewAzimuth = 0.f;
 static float viewPolar = 0.f;
 static float viewDistance = 300.0f;
 
+static float skyboxVertices[] = {
+    // positions
+    -1.0f, 1.0f, -1.0f,
+    -1.0f, -1.0f, -1.0f,
+    1.0f, -1.0f, -1.0f,
+    1.0f, -1.0f, -1.0f,
+    1.0f, 1.0f, -1.0f,
+    -1.0f, 1.0f, -1.0f,
+
+    -1.0f, -1.0f, 1.0f,
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, 1.0f, -1.0f,
+    -1.0f, 1.0f, -1.0f,
+    -1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, -1.0f,
+
+    1.0f, -1.0f, -1.0f,
+    1.0f, -1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, -1.0f,
+    1.0f, -1.0f, -1.0f,
+
+    -1.0f, -1.0f, 1.0f,
+    -1.0f, 1.0f, 1.0f,
+    1.0f, -1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f,
+    1.0f, -1.0f, 1.0f,
+    -1.0f, -1.0f, 1.0f,
+
+    -1.0f, 1.0f, -1.0f,
+    1.0f, 1.0f, -1.0f,
+    1.0f, 1.0f, 1.0f,
+    1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, 1.0f,
+    -1.0f, 1.0f, -1.0f,
+
+    -1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f, 1.0f,
+    1.0f, -1.0f, -1.0f,
+    1.0f, -1.0f, -1.0f,
+    -1.0f, -1.0f, 1.0f,
+    1.0f, -1.0f, 1.0f};
+
+GLuint loadCubemap(std::vector<std::string> faces) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+    int width, height, nrChannels;
+    for (GLuint i = 0; i < faces.size(); i++) {
+        unsigned char *data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data) {
+            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                         0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            std::cout << "Image processed" << std::endl;
+        } else {
+            std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+        }
+        stbi_image_free(data);
+    }
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+
+    return textureID;
+}
+
 static void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode) {
     if (key == GLFW_KEY_R && action == GLFW_PRESS) {
         viewAzimuth = 0.f;
@@ -502,7 +573,6 @@ struct Building {
     }
 };
 
-
 int main() {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -547,32 +617,61 @@ int main() {
     glm::float32 zFar = 10000.0f;
     projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
-    std::vector<Building> buildings;
+    // std::vector<Building> buildings;
 
-    int baseSize = 16;
+    // int baseSize = 16;
 
-    srand(time(0)); // Seed random number generator
+    // srand(time(0)); // Seed random number generator
 
-    for (int i = -10; i < 10; i += 2.5) {
-        for (int j = -10; j < 10; j += 2.5) {
+    // for (int i = -10; i < 10; i += 2.25) {
+    //     for (int j = -10; j < 10; j += 2.25) {
 
-            // Random height multiplier for variation in building height
-            float heightMultiplier = 1.0f + ((float)rand() / RAND_MAX * 8.0f);
+    //         // Random height multiplier for variation in building height
+    //         float heightMultiplier = 1.0f + ((float)rand() / RAND_MAX * 8.0f);
 
-            // Randomly select one of the facade textures (0 to 5)
-            int facadeIndex = rand() % 6;
-            std::string texturePath = "../lab2/facade" + std::to_string(facadeIndex) + ".jpg";
-            char *texturePathChar = new char[texturePath.size() + 1];
-            std::strcpy(texturePathChar, texturePath.c_str());
-            // Remember to delete[] texturePathChar when done to avoid memory leaks.
+    //         // Randomly select one of the facade textures (0 to 5)
+    //         int facadeIndex = rand() % 6;
+    //         std::string texturePath = "../lab2/facade" + std::to_string(facadeIndex) + ".jpg";
+    //         char *texturePathChar = new char[texturePath.size() + 1];
+    //         std::strcpy(texturePathChar, texturePath.c_str());
+    //         // Remember to delete[] texturePathChar when done to avoid memory leaks.
 
-            // Initialize building and push to vector
-            Building b;
-            b.initialize(glm::vec3(i, 0, j), glm::vec3(baseSize, heightMultiplier * baseSize, baseSize), texturePathChar);
-            buildings.push_back(b);
-            delete[] texturePathChar;
-        }
+    //         // Initialize building and push to vector
+    //         Building b;
+    //         b.initialize(glm::vec3(i, 0, j), glm::vec3(baseSize, heightMultiplier * baseSize, baseSize), texturePathChar);
+    //         buildings.push_back(b);
+    //         delete[] texturePathChar;
+    //     }
+    // }
+
+    GLuint skyboxVAO, skyboxVBO;
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+
+
+    GLuint skyboxShaderProgram = LoadShadersFromFile("../lab2/skybox.vert", "../lab2/skybox.frag");
+    if(skyboxShaderProgram==0){
+        std::cerr << "Failed to load skybox shaders" << std::endl;
+        return -1;
     }
+    glUseProgram(skyboxShaderProgram);
+
+
+    std::vector<std::string> faces = {
+        "../lab2/facade0.jpg",
+        "../lab2/facade1.jpg",
+        "../lab2/facade2.jpg",
+        "../lab2/facade3.jpg",
+        "../lab2/facade4.jpg",
+        "../lab2/facade5.jpg",
+    };
+
+    GLuint cubeMapTexture = loadCubemap(faces);
 
     do {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -580,10 +679,31 @@ int main() {
         viewMatrix = glm::lookAt(eye_center, lookat, up);
         glm::mat4 vp = projectionMatrix * viewMatrix;
 
+        glDepthFunc(GL_EQUAL);
+
+        glUseProgram(skyboxShaderProgram);
+
+        // Remove translation from the view matrix for the skybox
+        glm::mat4 skyboxView = glm::mat4(glm::mat3(viewMatrix)); // Remove translation component
+
+        // Set uniforms
+        GLuint viewLoc = glGetUniformLocation(skyboxShaderProgram, "view");
+        GLuint projLoc = glGetUniformLocation(skyboxShaderProgram, "projection");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, &skyboxView[0][0]);
+        glUniformMatrix4fv(projLoc, 1, GL_FALSE, &projectionMatrix[0][0]);
+
+        // Bind the skybox cubemap texture
+        glBindVertexArray(skyboxVAO);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glBindVertexArray(0);
+
+        glDepthFunc(GL_LESS); // Reset depth function for rendering other objects
+
         // Render the building
-        for (Building b : buildings) {
-            b.render(vp);
-        }
+        // for (Building b : buildings) {
+        //     b.render(vp);
+        // }
 
         // Swap buffers
         glfwSwapBuffers(window);
@@ -592,10 +712,16 @@ int main() {
     } // Check if the ESC key was pressed or the window was closed
     while (!glfwWindowShouldClose(window));
 
-    // Clean up
-    for (auto b : buildings) {
-        b.cleanup();
-    }
+    // Cleanup skybox resources
+    glDeleteVertexArrays(1, &skyboxVAO);
+    glDeleteBuffers(1, &skyboxVBO);
+    glDeleteTextures(1, &cubeMapTexture);
+    glDeleteProgram(skyboxShaderProgram); // Delete skybox shader program
+
+    // // Cleanup each building
+    // for (auto &b : buildings) {
+    //     b.cleanup();
+    // }
 
     // Close OpenGL window and terminate GLFW
     glfwTerminate();
