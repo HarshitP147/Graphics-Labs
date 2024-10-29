@@ -25,3 +25,13 @@ target_link_libraries(lab2_building
 	glfw
 	glad
 )
+
+add_executable(lab2
+	lab2/lab2.cpp
+	lab2/render/shader.cpp
+)
+target_link_libraries(lab2
+	${OPENGL_LIBRARY}
+	glfw
+	glad
+)

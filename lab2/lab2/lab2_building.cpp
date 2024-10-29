@@ -53,6 +53,7 @@ static GLuint LoadTextureTileBox(const char *texture_file_path) {
 struct Building {
 	glm::vec3 position;		// Position of the box
 	glm::vec3 scale;		// Size of the box in each axis
+	char * facadePath;
 
 	GLfloat vertex_buffer_data[72] = {	// Vertex definition for a canonical box
 		// Front face
@@ -153,6 +154,43 @@ struct Building {
     // TODO: Define UV buffer data
     // ---------------------------
     // ---------------------------
+	GLfloat uv_buffer_data[48] = {
+		// Front
+		0.0f, 1.0f,
+		1.0f, 1.0f,
+		1.0f, 0.0f,
+		0.0f, 0.0f,
+		// Back
+		0.0f, 1.0f,
+		1.0f, 1.0f,
+        1.0f, 0.0f,
+        0.0f, 0.0f,
+
+        // Left
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f,
+        0.0f, 0.0f,
+
+        // Right
+        0.0f, 1.0f,
+        1.0f, 1.0f,
+        1.0f, 0.0f,
+        0.0f, 0.0f,
+
+        // Top - we do not want texture the top
+        0.0f, 0.0f,
+        0.0f, 0.0f,
+        0.0f, 0.0f,
+        0.0f, 0.0f,
+
+        // Bottom - we do not want texture the bottom
+        0.0f, 0.0f,
+        0.0f, 0.0f,
+        0.0f, 0.0f,
+        0.0f, 0.0f,
+    };	// these are the UV coordinates of the texture image to be used
+
 
 	// OpenGL buffers
 	GLuint vertexArrayID;
@@ -167,10 +205,11 @@ struct Building {
 	GLuint textureSamplerID;
 	GLuint programID;
 
-	void initialize(glm::vec3 position, glm::vec3 scale) {
+	void initialize(glm::vec3 position, glm::vec3 scale,char *facadeTexturePath) {
 		// Define scale of the building geometry
 		this->position = position;
 		this->scale = scale;
+		this->facadePath = facadeTexturePath;
 
 		// Create a vertex array object
 		glGenVertexArrays(1, &vertexArrayID);
@@ -190,6 +229,12 @@ struct Building {
 		// TODO: Create a vertex buffer object to store the UV data
 		// --------------------------------------------------------
         // --------------------------------------------------------
+		for(int i=0;i<24;i++){
+			uv_buffer_data[2*i+1] *= 5;
+		}
+		glGenBuffers(1,&uvBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER,uvBufferID);
+		glBufferData(GL_ARRAY_BUFFER,sizeof(uv_buffer_data),uv_buffer_data,GL_STATIC_DRAW);
 
 		// Create an index buffer object to store the index data that defines triangle faces
 		glGenBuffers(1, &indexBufferID);
@@ -209,10 +254,12 @@ struct Building {
         // TODO: Load a texture
         // --------------------
         // --------------------
+		textureID = LoadTextureTileBox(facadePath);
 
         // TODO: Get a handle to texture sampler
         // -------------------------------------
         // -------------------------------------
+		textureSamplerID = glGetUniformLocation(programID,"textureSampler");
 	}
 
 	void render(glm::mat4 cameraMatrix) {
@@ -230,9 +277,10 @@ struct Building {
 
 		// TODO: Model transform
 		// -----------------------
-        glm::mat4 modelMatrix = glm::mat4();
+        // glm::mat4 modelMatrix = glm::scale(glm::mat4(),glm::vec3(5.0f));
         // Scale the box along each axis to make it look like a building
-        modelMatrix = glm::scale(modelMatrix, scale);
+        glm::mat4 modelMatrix = glm::scale(glm::mat4(), scale);
+		modelMatrix = glm::translate(modelMatrix,position);
         // -----------------------
 
 		// Set model-view-projection matrix
@@ -242,6 +290,14 @@ struct Building {
 		// TODO: Enable UV buffer and texture sampler
 		// ------------------------------------------
         // ------------------------------------------
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER,uvBufferID);
+		glVertexAttribPointer(2,2,GL_FLOAT,GL_FALSE,0,0);
+
+		// Set the textureSampler to use texture unit 0
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D,textureID);
+		glUniform1i(textureSamplerID,0);
 
 		// Draw the box
 		glDrawElements(
@@ -311,9 +367,19 @@ int main(void)
 
 	// TODO: Create more buildings
     // ---------------------------
+	std::vector<Building> buildings;
 	Building b;
-	b.initialize(glm::vec3(0, 0, 0), glm::vec3(30, 30, 30));
-    // ---------------------------
+	b.initialize(glm::vec3(2.5,0.5,2.5), glm::vec3(16,80, 16),"../lab2/facade0.jpg");
+	buildings.push_back(b);
+
+	Building b1;
+	b1.initialize(glm::vec3(0,0,0),glm::vec3(16,40,16),"../lab2/facade3.jpg");
+	buildings.push_back(b1);
+
+	Building b2;
+	// b2.initialize(glm::vec3())
+
+	// ---------------------------
 
 	// Camera setup
     eye_center.y = viewDistance * cos(viewPolar);
@@ -323,7 +389,7 @@ int main(void)
 	glm::mat4 viewMatrix, projectionMatrix;
     glm::float32 FoV = 45;
 	glm::float32 zNear = 0.1f;
-	glm::float32 zFar = 1000.0f;
+	glm::float32 zFar = 10000.0f;
 	projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
 	do
@@ -334,7 +400,10 @@ int main(void)
 		glm::mat4 vp = projectionMatrix * viewMatrix;
 
 		// Render the building
-		b.render(vp);
+		// b.render(vp);
+		for(auto bs:buildings){
+			bs.render(vp);
+		}
 
 		// Swap buffers
 		glfwSwapBuffers(window);
@@ -344,7 +413,10 @@ int main(void)
 	while (!glfwWindowShouldClose(window));
 
 	// Clean up
-	b.cleanup();
+	// b.cleanup();
+	for(auto bs:buildings){
+		bs.cleanup();
+	}
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();

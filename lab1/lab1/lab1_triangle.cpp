@@ -159,8 +159,8 @@ int main(void) {
 
     static const GLfloat color_buffer_data[] = {
         1.0f, 0.0f, 0.0f, // red
-        0.0f, 1.0f, 0.0f, // green
-        0.0f, 0.0f, 1.0f  // blue
+        1.0f, 0.0f, 0.0f, // green
+        1.0f, 0.0f, 0.0f  // blue
     };
 
     // Create a vertex array object
@@ -182,7 +182,7 @@ int main(void) {
     glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
 
     // Create and compile our GLSL program from the shaders
-    GLuint programID = LoadShaders("../lab1/lab1_triangle.vert", "../lab1/lab1_triangle.frag");
+    GLuint programID = LoadShaders("./lab1_triangle.vert", "./lab1_triangle.frag");
     if (programID == 0) {
         std::cerr << "Failed to load shaders." << std::endl;
         return -1;

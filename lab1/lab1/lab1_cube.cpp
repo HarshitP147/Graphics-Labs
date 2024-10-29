@@ -428,6 +428,7 @@ struct Box
 
 	void render(glm::mat4 cameraMatrix)
 	{
+
 		glUseProgram(programID);
 
 		glEnableVertexAttribArray(0);
@@ -455,6 +456,7 @@ struct Box
 
 		// TODO: Set model-view-projection matrix
 		glm::mat4 mvp = cameraMatrix * modelMatrix;
+
 		// ------------------------------------
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
 
@@ -586,6 +588,7 @@ int main(void)
 
 		// For convenience, we multiply the projection and view matrix together and pass a single matrix for rendering
 		glm::mat4 vp = projectionMatrix * viewMatrix;
+
 
 		// Visualize the global axes
 		debugAxes.render(vp);
