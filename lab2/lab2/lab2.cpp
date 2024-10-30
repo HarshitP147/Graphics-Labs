@@ -617,32 +617,32 @@ int main() {
     glm::float32 zFar = 10000.0f;
     projectionMatrix = glm::perspective(glm::radians(FoV), 4.0f / 3.0f, zNear, zFar);
 
-    // std::vector<Building> buildings;
+    std::vector<Building> buildings;
 
-    // int baseSize = 16;
+    int baseSize = 16;
 
-    // srand(time(0)); // Seed random number generator
+    srand(time(0)); // Seed random number generator
 
-    // for (int i = -10; i < 10; i += 2.25) {
-    //     for (int j = -10; j < 10; j += 2.25) {
+    for (int i = -10; i < 10; i += 2.25) {
+        for (int j = -10; j < 10; j += 2.25) {
 
-    //         // Random height multiplier for variation in building height
-    //         float heightMultiplier = 1.0f + ((float)rand() / RAND_MAX * 8.0f);
+            // Random height multiplier for variation in building height
+            float heightMultiplier = 1.0f + ((float)rand() / RAND_MAX * 8.0f);
 
-    //         // Randomly select one of the facade textures (0 to 5)
-    //         int facadeIndex = rand() % 6;
-    //         std::string texturePath = "../lab2/facade" + std::to_string(facadeIndex) + ".jpg";
-    //         char *texturePathChar = new char[texturePath.size() + 1];
-    //         std::strcpy(texturePathChar, texturePath.c_str());
-    //         // Remember to delete[] texturePathChar when done to avoid memory leaks.
+            // Randomly select one of the facade textures (0 to 5)
+            int facadeIndex = rand() % 6;
+            std::string texturePath = "../lab2/facade" + std::to_string(facadeIndex) + ".jpg";
+            char *texturePathChar = new char[texturePath.size() + 1];
+            std::strcpy(texturePathChar, texturePath.c_str());
+            // Remember to delete[] texturePathChar when done to avoid memory leaks.
 
-    //         // Initialize building and push to vector
-    //         Building b;
-    //         b.initialize(glm::vec3(i, 0, j), glm::vec3(baseSize, heightMultiplier * baseSize, baseSize), texturePathChar);
-    //         buildings.push_back(b);
-    //         delete[] texturePathChar;
-    //     }
-    // }
+            // Initialize building and push to vector
+            Building b;
+            b.initialize(glm::vec3(i, 0, j), glm::vec3(baseSize, heightMultiplier * baseSize, baseSize), texturePathChar);
+            buildings.push_back(b);
+            delete[] texturePathChar;
+        }
+    }
 
     GLuint skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);

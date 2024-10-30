@@ -8,8 +8,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#include <bits/stdc++.h>
+
 #include <vector>
 #include <iostream>
+#include <string>
 #define _USE_MATH_DEFINES
 #include <math.h>
 
@@ -309,7 +312,7 @@ struct Building {
 
 		glDisableVertexAttribArray(0);
 		glDisableVertexAttribArray(1);
-        //glDisableVertexAttribArray(2);
+        glDisableVertexAttribArray(2);
 	}
 
 	void cleanup() {
@@ -317,8 +320,8 @@ struct Building {
 		glDeleteBuffers(1, &colorBufferID);
 		glDeleteBuffers(1, &indexBufferID);
 		glDeleteVertexArrays(1, &vertexArrayID);
-		//glDeleteBuffers(1, &uvBufferID);
-		//glDeleteTextures(1, &textureID);
+		glDeleteBuffers(1, &uvBufferID);
+		glDeleteTextures(1, &textureID);
 		glDeleteProgram(programID);
 	}
 };
@@ -367,17 +370,32 @@ int main(void)
 
 	// TODO: Create more buildings
     // ---------------------------
-	std::vector<Building> buildings;
-	Building b;
-	b.initialize(glm::vec3(2.5,0.5,2.5), glm::vec3(16,80, 16),"../lab2/facade0.jpg");
-	buildings.push_back(b);
+	 std::vector<Building> buildings;
 
-	Building b1;
-	b1.initialize(glm::vec3(0,0,0),glm::vec3(16,40,16),"../lab2/facade3.jpg");
-	buildings.push_back(b1);
+    int baseSize = 16;
 
-	Building b2;
-	// b2.initialize(glm::vec3())
+    srand(time(0)); // Seed random number generator
+
+    for (int i = -10; i < 10; i += 2.25) {
+        for (int j = -10; j < 10; j += 2.25) {
+
+            // Random height multiplier for variation in building height
+            float heightMultiplier = 1.0f + ((float)rand() / RAND_MAX * 8.0f);
+
+            // Randomly select one of the facade textures (0 to 5)
+            int facadeIndex = rand() % 6;
+            std::string texturePath = "../lab2/facade" + std::to_string(facadeIndex) + ".jpg";
+            char *texturePathChar = new char[texturePath.size() + 1];
+            std::strcpy(texturePathChar, texturePath.c_str());
+            // Remember to delete[] texturePathChar when done to avoid memory leaks.
+
+            // Initialize building and push to vector
+            Building b;
+            b.initialize(glm::vec3(i, 0, j), glm::vec3(baseSize, heightMultiplier * baseSize, baseSize), texturePathChar);
+            buildings.push_back(b);
+            delete[] texturePathChar;
+        }
+    }
 
 	// ---------------------------
 
