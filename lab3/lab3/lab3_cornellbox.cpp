@@ -289,6 +289,416 @@ struct CornellBox {
 	}
 };
 
+struct ShortBox {
+	GLfloat vertex_buffer_data[60] = {
+		-130.0,  165.0,  -65.0,
+		-82.0,  165.0,  -225.0,
+		-240.0,  165.0,  -272.0,
+		-290.0,  165.0,  -114.0,
+
+		-290.0,    0.0,  -114.0,
+		-290.0,  165.0,  -114.0,
+		-240.0,  165.0,  -272.0,
+		-240.0,    0.0,  -272.0,
+
+		-130.0,    0.0,   -65.0,
+		-130.0,  165.0,   -65.0,
+		-290.0,  165.0,  -114.0,
+		-290.0,    0.0,  -114.0,
+
+		-82.0,    0.0,  -225.0,
+		-82.0,  165.0,  -225.0,
+		-130.0,  165.0,   -65.0,
+		-130.0,    0.0,  -65.0,
+
+		-240.0,    0.0, - 272.0,
+		-240.0,  165.0, - 272.0,
+		-82.0,  165.0,  -225.0,
+		-82.0,    0.0,  -225.0,
+	};
+
+	GLfloat normal_buffer_data[60] = {
+// Floor
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+
+		// Ceiling
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+
+		// Left wall
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+
+		// Right wall
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+
+		// Back wall
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0
+	};
+
+	GLfloat color_buffer_data[60] = {
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+	};
+
+
+	GLuint index_buffer_data[30] = {
+		0, 1, 2,
+		0, 2, 3,
+
+		4, 5, 6,
+		4, 6, 7,
+
+		8, 9, 10,
+		8, 10, 11,
+
+		12, 13, 14,
+		12, 14, 15,
+
+		16, 17, 18,
+		16, 18, 19,
+	};
+
+	// OpenGL buffers
+	GLuint vertexArrayID;
+	GLuint vertexBufferID;
+	GLuint indexBufferID;
+	GLuint colorBufferID;
+	GLuint normalBufferID;
+
+	// Shader variable IDs
+	GLuint mvpMatrixID;
+	GLuint lightPositionID;
+	GLuint lightIntensityID;
+	GLuint programID;
+
+	void initialize() {
+		// Create a vertex array object
+		glGenVertexArrays(1, &vertexArrayID);
+		glBindVertexArray(vertexArrayID);
+
+		// Create a vertex buffer object to store the vertex data
+		glGenBuffers(1, &vertexBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
+
+		// Create a vertex buffer object to store the color data
+		glGenBuffers(1, &colorBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
+
+		// Create a vertex buffer object to store the vertex normals
+		glGenBuffers(1, &normalBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(normal_buffer_data), normal_buffer_data, GL_STATIC_DRAW);
+
+		// Create an index buffer object to store the index data that defines triangle faces
+		glGenBuffers(1, &indexBufferID);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW);
+
+		// Create and compile our GLSL program from the shaders
+		programID = LoadShadersFromFile("../lab3/box.vert", "../lab3/box.frag");
+		if (programID == 0)
+		{
+			std::cerr << "Failed to load shaders." << std::endl;
+		}
+
+		// Get a handle for our "MVP" uniform
+		mvpMatrixID = glGetUniformLocation(programID, "MVP");
+		lightPositionID = glGetUniformLocation(programID, "lightPosition");
+		lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
+	}
+
+	void render(glm::mat4 cameraMatrix) {
+		glUseProgram(programID);
+
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+		// Set model-view-projection matrix
+		glm::mat4 mvp = cameraMatrix;
+		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+
+		// Set light data
+		glUniform3fv(lightPositionID, 1, &lightPosition[0]);
+		glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
+
+		// Draw the box
+		glDrawElements(
+			GL_TRIANGLES,      // mode
+			30,    			   // number of indices
+			GL_UNSIGNED_INT,   // type
+			(void*)0           // element array buffer offset
+		);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+	}
+
+	void cleanup() {
+		glDeleteBuffers(1, &vertexBufferID);
+		glDeleteBuffers(1, &colorBufferID);
+		glDeleteBuffers(1, &indexBufferID);
+		glDeleteBuffers(1, &normalBufferID);
+		glDeleteVertexArrays(1, &vertexArrayID);
+		glDeleteProgram(programID);
+	}
+};
+
+struct TallBox {
+	GLfloat vertex_buffer_data[60] = {
+		-423.0,  330.0,  -247.0,
+		-265.0,  330.0,  -296.0,
+		-314.0,  330.0,  -456.0,
+		-472.0,  330.0,  -406.0,
+
+		-423.0,    0.0,  -247.0,
+		-423.0,  330.0,  -247.0,
+		-472.0,  330.0,  -406.0,
+		-472.0,    0.0,  -406.0,
+
+		-472.0,    0.0,  -406.0,
+		-472.0,  330.0,  -406.0,
+		-314.0,  330.0,  -456.0,
+		-314.0,    0.0,  -456.0,
+
+		-314.0,    0.0,  -456.0,
+		-314.0,  330.0,  -456.0,
+		-265.0,  330.0,  -296.0,
+		-265.0,    0.0,  -296.0,
+
+		-265.0,    0.0,  -296.0,
+		-265.0,  330.0,  -296.0,
+		-423.0,  330.0,  -247.0,
+		-423.0,    0.0,  -247.0,
+	};
+
+	GLfloat normal_buffer_data[60] = {
+// Floor
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+		0.0, 1.0, 0.0,
+
+		// Ceiling
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+		0.0, -1.0, 0.0,
+
+		// Left wall
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+		1.0, 0.0, 0.0,
+
+		// Right wall
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+		-1.0, 0.0, 0.0,
+
+		// Back wall
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0,
+		0.0, 0.0, 1.0
+	};
+
+	GLfloat color_buffer_data[60] = {
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+		1.0, 1.0, 1.0,
+	};
+
+
+	GLuint index_buffer_data[30] = {
+		0, 1, 2,
+		0, 2, 3,
+
+		4, 5, 6,
+		4, 6, 7,
+
+		8, 9, 10,
+		8, 10, 11,
+
+		12, 13, 14,
+		12, 14, 15,
+
+		16, 17, 18,
+		16, 18, 19,
+	};
+
+	// OpenGL buffers
+	GLuint vertexArrayID;
+	GLuint vertexBufferID;
+	GLuint indexBufferID;
+	GLuint colorBufferID;
+	GLuint normalBufferID;
+
+	// Shader variable IDs
+	GLuint mvpMatrixID;
+	GLuint lightPositionID;
+	GLuint lightIntensityID;
+	GLuint programID;
+
+	void initialize() {
+		// Create a vertex array object
+		glGenVertexArrays(1, &vertexArrayID);
+		glBindVertexArray(vertexArrayID);
+
+		// Create a vertex buffer object to store the vertex data
+		glGenBuffers(1, &vertexBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_buffer_data), vertex_buffer_data, GL_STATIC_DRAW);
+
+		// Create a vertex buffer object to store the color data
+		glGenBuffers(1, &colorBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(color_buffer_data), color_buffer_data, GL_STATIC_DRAW);
+
+		// Create a vertex buffer object to store the vertex normals
+		glGenBuffers(1, &normalBufferID);
+		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(normal_buffer_data), normal_buffer_data, GL_STATIC_DRAW);
+
+		// Create an index buffer object to store the index data that defines triangle faces
+		glGenBuffers(1, &indexBufferID);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_buffer_data), index_buffer_data, GL_STATIC_DRAW);
+
+		// Create and compile our GLSL program from the shaders
+		programID = LoadShadersFromFile("../lab3/box.vert", "../lab3/box.frag");
+		if (programID == 0)
+		{
+			std::cerr << "Failed to load shaders." << std::endl;
+		}
+
+		// Get a handle for our "MVP" uniform
+		mvpMatrixID = glGetUniformLocation(programID, "MVP");
+		lightPositionID = glGetUniformLocation(programID, "lightPosition");
+		lightIntensityID = glGetUniformLocation(programID, "lightIntensity");
+	}
+
+	void render(glm::mat4 cameraMatrix) {
+		glUseProgram(programID);
+
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, vertexBufferID);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glEnableVertexAttribArray(1);
+		glBindBuffer(GL_ARRAY_BUFFER, colorBufferID);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glEnableVertexAttribArray(2);
+		glBindBuffer(GL_ARRAY_BUFFER, normalBufferID);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferID);
+
+		// Set model-view-projection matrix
+		glm::mat4 mvp = cameraMatrix;
+		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
+
+		// Set light data
+		glUniform3fv(lightPositionID, 1, &lightPosition[0]);
+		glUniform3fv(lightIntensityID, 1, &lightIntensity[0]);
+
+		// Draw the box
+		glDrawElements(
+			GL_TRIANGLES,      // mode
+			30,    			   // number of indices
+			GL_UNSIGNED_INT,   // type
+			(void*)0           // element array buffer offset
+		);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+	}
+
+	void cleanup() {
+		glDeleteBuffers(1, &vertexBufferID);
+		glDeleteBuffers(1, &colorBufferID);
+		glDeleteBuffers(1, &indexBufferID);
+		glDeleteBuffers(1, &normalBufferID);
+		glDeleteVertexArrays(1, &vertexArrayID);
+		glDeleteProgram(programID);
+	}
+};
+
+
+
 int main(void)
 {
 	// Initialise GLFW
@@ -340,6 +750,12 @@ int main(void)
 	CornellBox b;
 	b.initialize();
 
+	ShortBox sb;
+	sb.initialize();
+
+	TallBox tb;
+	tb.initialize();
+
 	// Camera setup
     glm::mat4 viewMatrix, projectionMatrix;
 	projectionMatrix = glm::perspective(glm::radians(FoV), (float)windowWidth / windowHeight, zNear, zFar);
@@ -352,6 +768,8 @@ int main(void)
 		glm::mat4 vp = projectionMatrix * viewMatrix;
 
 		b.render(vp);
+		sb.render(vp);
+		tb.render(vp);
 
 		if (saveDepth) {
             std::string filename = "depth_camera.png";
@@ -369,6 +787,8 @@ int main(void)
 
 	// Clean up
 	b.cleanup();
+	sb.cleanup();
+	tb.cleanup();
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
@@ -413,6 +833,16 @@ static void key_callback(GLFWwindow *window, int key, int scancode, int action, 
 	if (key == GLFW_KEY_S && (action == GLFW_REPEAT || action == GLFW_PRESS))
 	{
 		lightPosition.z += 20.0f;
+	}
+
+	if (key == GLFW_KEY_A && (action == GLFW_REPEAT || action == GLFW_PRESS))
+	{
+		lightIntensity /= 1.25f;
+	}
+
+	if (key == GLFW_KEY_D && (action == GLFW_REPEAT || action == GLFW_PRESS))
+	{
+			lightIntensity *= 1.25f;
 	}
 
 	if (key == GLFW_KEY_SPACE && (action == GLFW_REPEAT || action == GLFW_PRESS))
