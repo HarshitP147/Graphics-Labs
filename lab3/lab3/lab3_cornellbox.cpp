@@ -41,12 +41,12 @@ static int shadowMapWidth = 0;
 static int shadowMapHeight = 0;
 
 // TODO: set these parameters
-static float depthFoV = 0.f;
-static float depthNear = 0.f;
-static float depthFar = 0.f;
+static float depthFoV = 90.f;
+static float depthNear = 0.1f;
+static float depthFar = 10000.0f;
 
 // Helper flag and function to save depth maps for debugging
-static bool saveDepth = false;
+static bool saveDepth = true;
 
 // This function retrieves and stores the depth map of the default frame buffer
 // or a particular frame buffer (indicated by FBO ID) to a PNG image.
@@ -66,7 +66,7 @@ static void saveDepthTexture(GLuint fbo, std::string filename) {
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
     std::vector<unsigned char> img(width * height * 3);
-    for (int i = 0; i < width * height; ++i) img[3*i] = img[3*i+1] = img[3*i+2] = depth[i] * 255;
+    for (int i = 0; i < width * height; ++i) img[3*i] = img[3*i+1] = img[3*i+2] = depth[i]*255;
 
     stbi_write_png(filename.c_str(), width, height, channels, img.data(), width * channels);
 }
@@ -291,26 +291,31 @@ struct CornellBox {
 
 struct ShortBox {
 	GLfloat vertex_buffer_data[60] = {
+		// Top
 		-130.0,  165.0,  -65.0,
 		-82.0,  165.0,  -225.0,
 		-240.0,  165.0,  -272.0,
 		-290.0,  165.0,  -114.0,
 
+		// Left
 		-290.0,    0.0,  -114.0,
 		-290.0,  165.0,  -114.0,
 		-240.0,  165.0,  -272.0,
 		-240.0,    0.0,  -272.0,
 
+		// Front
 		-130.0,    0.0,   -65.0,
 		-130.0,  165.0,   -65.0,
 		-290.0,  165.0,  -114.0,
 		-290.0,    0.0,  -114.0,
 
+		// Right
 		-82.0,    0.0,  -225.0,
 		-82.0,  165.0,  -225.0,
 		-130.0,  165.0,   -65.0,
 		-130.0,    0.0,  -65.0,
 
+		// Rear
 		-240.0,    0.0, - 272.0,
 		-240.0,  165.0, - 272.0,
 		-82.0,  165.0,  -225.0,
@@ -318,35 +323,35 @@ struct ShortBox {
 	};
 
 	GLfloat normal_buffer_data[60] = {
-// Floor
+		// Top
 		0.0, 1.0, 0.0,
 		0.0, 1.0, 0.0,
 		0.0, 1.0, 0.0,
 		0.0, 1.0, 0.0,
 
-		// Ceiling
-		0.0, -1.0, 0.0,
-		0.0, -1.0, 0.0,
-		0.0, -1.0, 0.0,
-		0.0, -1.0, 0.0,
+		// Rear
+		-0.9534,0,-0.30171,
+		-0.9534,0,-0.30171,
+		-0.9534,0,-0.30171,
+		-0.9534,0,-0.30171,
 
 		// Left wall
-		1.0, 0.0, 0.0,
-		1.0, 0.0, 0.0,
-		1.0, 0.0, 0.0,
-		1.0, 0.0, 0.0,
+		-0.29283,0,0.95617,
+		-0.29283,0,0.95617,
+		-0.29283,0,0.95617,
+		-0.29283,0,0.95617,
 
 		// Right wall
-		-1.0, 0.0, 0.0,
-		-1.0, 0.0, 0.0,
-		-1.0, 0.0, 0.0,
-		-1.0, 0.0, 0.0,
+		0.95783,0,0.28735,
+		0.95783,0,0.28735,
+		0.95783,0,0.28735,
+		0.95783,0,0.28735,
 
 		// Back wall
-		0.0, 0.0, 1.0,
-		0.0, 0.0, 1.0,
-		0.0, 0.0, 1.0,
-		0.0, 0.0, 1.0
+		0.28512,0,-0.95849,
+		0.28512,0,-0.95849,
+		0.28512,0,-0.95849,
+		0.28512,0,-0.95849,
 	};
 
 	GLfloat color_buffer_data[60] = {
@@ -375,7 +380,6 @@ struct ShortBox {
 		1.0, 1.0, 1.0,
 		1.0, 1.0, 1.0,
 	};
-
 
 	GLuint index_buffer_data[30] = {
 		0, 1, 2,
@@ -495,62 +499,67 @@ struct ShortBox {
 
 struct TallBox {
 	GLfloat vertex_buffer_data[60] = {
+		// Top
 		-423.0,  330.0,  -247.0,
 		-265.0,  330.0,  -296.0,
 		-314.0,  330.0,  -456.0,
 		-472.0,  330.0,  -406.0,
 
+		// Left
 		-423.0,    0.0,  -247.0,
 		-423.0,  330.0,  -247.0,
 		-472.0,  330.0,  -406.0,
 		-472.0,    0.0,  -406.0,
 
+		// Rear
 		-472.0,    0.0,  -406.0,
 		-472.0,  330.0,  -406.0,
 		-314.0,  330.0,  -456.0,
 		-314.0,    0.0,  -456.0,
 
+		// Right
 		-314.0,    0.0,  -456.0,
 		-314.0,  330.0,  -456.0,
 		-265.0,  330.0,  -296.0,
 		-265.0,    0.0,  -296.0,
 
+		// Front
 		-265.0,    0.0,  -296.0,
 		-265.0,  330.0,  -296.0,
-		-423.0,  330.0,  -247.0,
+		-423.0, 330.0,  -247.0,
 		-423.0,    0.0,  -247.0,
 	};
 
 	GLfloat normal_buffer_data[60] = {
-// Floor
+		// Top
 		0.0, 1.0, 0.0,
 		0.0, 1.0, 0.0,
 		0.0, 1.0, 0.0,
 		0.0, 1.0, 0.0,
 
-		// Ceiling
-		0.0, -1.0, 0.0,
-		0.0, -1.0, 0.0,
-		0.0, -1.0, 0.0,
-		0.0, -1.0, 0.0,
+		// Left
+		-0.95565, 0.0, 0.29451,
+		-0.95565, 0.0, 0.29451,
+		-0.95565, 0.0, 0.29451,
+		-0.95565, 0.0, 0.29451,
 
-		// Left wall
-		1.0, 0.0, 0.0,
-		1.0, 0.0, 0.0,
-		1.0, 0.0, 0.0,
-		1.0, 0.0, 0.0,
+		// Rear
+		-0.30171,0.0, -0.9534,
+		-0.30171,0.0, -0.9534,
+		-0.30171,0.0, -0.9534,
+		-0.30171,0.0, -0.9534,
 
-		// Right wall
-		-1.0, 0.0, 0.0,
-		-1.0, 0.0, 0.0,
-		-1.0, 0.0, 0.0,
-		-1.0, 0.0, 0.0,
+		// Right
+		0.94014,0.0,-0.3408,
+		0.94014,0.0,-0.3408,
+		0.94014,0.0,-0.3408,
+		0.94014,0.0,-0.3408,
 
-		// Back wall
-		0.0, 0.0, 1.0,
-		0.0, 0.0, 1.0,
-		0.0, 0.0, 1.0,
-		0.0, 0.0, 1.0
+		// Front
+		0.29621,0.0,0.95512,
+		0.29621,0.0,0.95512,
+		0.29621,0.0,0.95512,
+		0.29621,0.0,0.95512,
 	};
 
 	GLfloat color_buffer_data[60] = {
@@ -696,7 +705,6 @@ struct TallBox {
 		glDeleteProgram(programID);
 	}
 };
-
 
 
 int main(void)
