@@ -46,7 +46,7 @@ static float depthNear = 0.1f;
 static float depthFar = 10000.0f;
 
 // Helper flag and function to save depth maps for debugging
-static bool saveDepth = true;
+static bool saveDepth = false;
 
 // This function retrieves and stores the depth map of the default frame buffer
 // or a particular frame buffer (indicated by FBO ID) to a PNG image.
@@ -764,9 +764,63 @@ int main(void)
 	TallBox tb;
 	tb.initialize();
 
+	// Initialize a depth buffer object
+	GLuint depthMapFrameBufferObject;
+	glGenFramebuffers(1, &depthMapFrameBufferObject);
+
+	// Create a texture which will store the depth information
+	GLuint depthMapTexture;
+	glGenTextures(1, &depthMapTexture);
+	glBindTexture(GL_TEXTURE_2D,depthMapTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT,shadowMapWidth,shadowMapHeight,0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// Attach the depth buffer with the texture
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFrameBufferObject);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthMapTexture,0);
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	// Light view setup
+	glm::mat4 lightViewMatrix, lightProjectionMatrix;
+	lightProjectionMatrix = glm::perspective(glm::radians(depthFoV),(float)shadowMapWidth/shadowMapHeight,depthNear,depthFar);
+	lightViewMatrix = glm::lookAt(eye_center,lookat,lightUp);
+	glm::mat4 lightVp = lightProjectionMatrix * lightViewMatrix;
+
+	// First render according to the light's perspective
+
+	// configure some matrices and shader functions
+	GLuint programID = LoadShadersFromFile("../lab3/shadow.vert","../lab3/shadow.frag");
+	if(programID==0){
+		std::cerr << "Failed to load shaders" << std::endl;
+		return 1;
+	}
+	GLuint lightMatrixID = glGetUniformLocation(programID,"lightSpaceMatrix");
+	glUniformMatrix4fv(lightMatrixID, 1, GL_FALSE, &lightVp[0][0]);
+	glViewport(0,0, shadowMapWidth, shadowMapHeight);
+	glBindFramebuffer(GL_FRAMEBUFFER, depthMapFrameBufferObject);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	// Render the scene from light's perspective
+	b.render(lightVp);
+	sb.render(lightVp);
+	tb.render(lightVp);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 	// Camera setup
     glm::mat4 viewMatrix, projectionMatrix;
 	projectionMatrix = glm::perspective(glm::radians(FoV), (float)windowWidth / windowHeight, zNear, zFar);
+
+	// now render the scene normally
+	glViewport(0,0, shadowMapWidth,shadowMapHeight);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	// configure shader matrices
+	glBindTexture(GL_TEXTURE_2D, depthMapTexture);
 
 	do
 	{
@@ -797,6 +851,12 @@ int main(void)
 	b.cleanup();
 	sb.cleanup();
 	tb.cleanup();
+
+	// Delete the remaining shadow buffers
+	glDeleteBuffers(1,&depthMapFrameBufferObject);
+	glDeleteTextures(1, &depthMapTexture);
+	glDeleteProgram(programID);
+	glDeleteBuffers(1, &lightMatrixID);
 
 	// Close OpenGL window and terminate GLFW
 	glfwTerminate();
@@ -878,5 +938,5 @@ static void cursor_callback(GLFWwindow *window, double xpos, double ypos) {
 	lightPosition.x = x * scale - 278;
 	lightPosition.y = y * scale + 278;
 
-	std::cout << lightPosition.x << " " << lightPosition.y << " " << lightPosition.z << std::endl;
+	// std::cout << lightPosition.x << " " << lightPosition.y << " " << lightPosition.z << std::endl;
 }

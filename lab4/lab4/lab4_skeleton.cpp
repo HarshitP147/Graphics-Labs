@@ -271,9 +271,9 @@ struct MyBot {
 		// TODO: your code here
 		// model.nodes
 		// localTransforms[nodeIndex]
- 		glm::vec3 translation(0.0f);
-	    glm::quat rotation(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
-	    glm::vec3 scale(1.0f);
+		glm::vec3 translation;
+		glm::quat rotation;
+		glm::vec3 scale;
 
 		const tinygltf::Node &node = model.nodes[nodeIndex];
 
@@ -419,18 +419,18 @@ struct MyBot {
 			const auto &sampler = anim.samplers[channel.sampler];
 
 			// Access output (value) data for the channel
-			const tinygltf::Accessor &outputAccessor = model.accessors[sampler.output];
+			const tinygltf::Accessor &outputAccessor = model.accessors[sampler.output];		// points to the values that need to be applied to the targetNode
 			const tinygltf::BufferView &outputBufferView = model.bufferViews[outputAccessor.bufferView];
-			const tinygltf::Buffer &outputBuffer = model.buffers[outputBufferView.buffer];
+			const tinygltf::Buffer &outputBuffer = model.buffers[outputBufferView.buffer];		// contain the actual buffer
 
 			// Calculate current animation time (wrap if necessary)
-			const std::vector<float> &times = animationObject.samplers[channel.sampler].input;
+			const std::vector<float> &times = animationObject.samplers[channel.sampler].input;	// this is the upper row
 			float animationTime = fmod(time, times.back());
 
 			// ----------------------------------------------------------
 			// TODO: Find a keyframe for getting animation data
 			// ----------------------------------------------------------
-			int keyframeIndex = 0;
+			int keyframeIndex = this->findKeyframeIndex(times,animationTime);	// determine the starting point of the interpolation
 
 			const unsigned char *outputPtr = &outputBuffer.data[outputBufferView.byteOffset + outputAccessor.byteOffset];
 			const float *outputBuf = reinterpret_cast<const float*>(outputPtr);
@@ -438,36 +438,65 @@ struct MyBot {
 			// -----------------------------------------------------------
 			// TODO: Add interpolation for smooth interpolation
 			// -----------------------------------------------------------
+
+			// take the value from keyFrameIndex to targetNodeIndex and interpolate the values with respect to time to find out the extra variable
+
+			// if(sampler.interpolation=="LINEAR"){
+			// 	// nodeTransforms[keyframeIndex]
+			// }
+
+			float t0 = times[keyframeIndex];
+			float t1 = times[keyframeIndex+1];
+
+			float factor = (animationTime-t1)/(t0-t1);
+
 			if (channel.target_path == "translation") {
 				glm::vec3 translation0, translation1;
 				memcpy(&translation0, outputPtr + keyframeIndex * 3 * sizeof(float), 3 * sizeof(float));
+				memcpy(&translation1, outputPtr + (keyframeIndex+1) * 3 * sizeof(float), 3 * sizeof(float));
 
-				glm::vec3 translation = translation0;
+				// glm::vec3 translation = glm::mix(translation0,translation1,factor);
+				glm::vec3 translation;
+				if(sampler.interpolation=="STEP"){
+					translation = translation1;
+				} else if(sampler.interpolation=="LINEAR"){
+					translation = glm::mix(translation0,translation1,factor);
+				}
 				nodeTransforms[targetNodeIndex] = glm::translate(nodeTransforms[targetNodeIndex], translation);
+
 			} else if (channel.target_path == "rotation") {
 				glm::quat rotation0, rotation1;
 				memcpy(&rotation0, outputPtr + keyframeIndex * 4 * sizeof(float), 4 * sizeof(float));
+				memcpy(&rotation1, outputPtr + (keyframeIndex+1) * 4 * sizeof(float), 4 * sizeof(float));
 
-				glm::quat rotation = rotation0;
+				// glm::quat rotation = rotation0;
+				glm::quat rotation;
+				if(sampler.interpolation=="STEP"){
+					rotation = rotation1;
+				} else if(sampler.interpolation=="LINEAR"){
+					rotation = glm::slerp(rotation0,rotation1,factor);
+				}
 				nodeTransforms[targetNodeIndex] *= glm::mat4_cast(rotation);
 			} else if (channel.target_path == "scale") {
 				glm::vec3 scale0, scale1;
 				memcpy(&scale0, outputPtr + keyframeIndex * 3 * sizeof(float), 3 * sizeof(float));
+				memcpy(&scale1, outputPtr + (keyframeIndex+1) * 3 * sizeof(float), 3 * sizeof(float));
 
-				glm::vec3 scale = scale0;
+				// glm::vec3 scale = glm::mix(scale0,scale1,factor);
+				glm::vec3 scale;
+				if(sampler.interpolation=="STEP"){
+					scale = scale1;
+				} else if(sampler.interpolation=="LINEAR"){
+					scale = glm::mix(scale0,scale1,factor);
+				}
 				nodeTransforms[targetNodeIndex] = glm::scale(nodeTransforms[targetNodeIndex], scale);
 			}
-
-			// inverse
 		}
 	}
 
 	void update(float time) {
 		// TODO:
 		// return;	// Do nothing for T-pose, comment out for animation
-
-		// std::cout << time << std::endl;
-
 
 		if (model.animations.size() > 0) {
 			const tinygltf::Animation &animation = model.animations[0];
@@ -485,6 +514,18 @@ struct MyBot {
             // TODO: Recompute global transforms at each node
 			// using the updated node transforms above
             // ----------------------------------------------
+			// Compute local transforms at each node
+
+			std::vector<glm::mat4> globalNodeTransforms(skin.joints.size(), glm::mat4(1.0f));
+
+			// Start from the first joint
+			int rootNode = skin.joints[0];
+			// this function is already recursive
+			computeGlobalNodeTransform(model,nodeTransforms,rootNode,glm::mat4(1.0f),globalNodeTransforms);
+
+			// Update the value for global node transforms
+			globalTransforms = globalNodeTransforms;
+
 		}
 	}
 
@@ -530,7 +571,6 @@ struct MyBot {
         // Compute local transforms at each node
 		for(int i=0;i<skin.joints.size();i++){
 			int rootNodeIndex = skin.joints[i];
-			// std::cout << rootNodeIndex << std::endl;
 			computeLocalNodeTransform(model, i, localNodeTransforms);
 		}
 

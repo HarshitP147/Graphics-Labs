@@ -10,6 +10,9 @@ uniform vec3 lightPosition;
 uniform vec3 lightIntensity;
 uniform float reflectance = 0.78;
 
+uniform sampler2D depthMap;
+in vec2 TexCoords;
+
 void main()
 {
 	vec3 lightDir = normalize(lightPosition-worldPosition);
@@ -30,4 +33,9 @@ void main()
 
     // Apply gamma correction for better display on screen
     finalColor = pow(finalColor, vec3(1.0/ 2.2));
+
+	float depthValue = texture(depthMap, TexCoords).r;
+	// finalColor /= vec3(depthValue);
+
+	finalColor *= depthValue * depthValue;
 }
