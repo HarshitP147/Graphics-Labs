@@ -277,28 +277,7 @@ struct MyBot {
 
 		const tinygltf::Node &node = model.nodes[nodeIndex];
 
-		// Extract translation if present
-		if (!node.translation.empty()) {
-			translation = glm::vec3(node.translation[0], node.translation[1], node.translation[2]);
-		}
-
-		// Extract rotation if present
-		if (!node.rotation.empty()) {
-			rotation = glm::quat(
-				node.rotation[3], node.rotation[0], node.rotation[1], node.rotation[2]);
-		}
-
-		// Extract scale if present
-		if (!node.scale.empty()) {
-			scale = glm::vec3(node.scale[0], node.scale[1], node.scale[2]);
-		}
-
-		// Compute the transformation matrices
-		glm::mat4 T = glm::translate(glm::mat4(1.0f), translation);
-		glm::mat4 R = glm::mat4_cast(rotation); // Convert quaternion to rotation matrix
-		glm::mat4 S = glm::scale(glm::mat4(1.0f), scale);
-
-		localTransforms[nodeIndex] = T * R * S;
+		localTransforms[nodeIndex] = getNodeTransform(node);
 	}
 
 	void computeGlobalNodeTransform(const tinygltf::Model& model,
