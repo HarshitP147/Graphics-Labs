@@ -89,6 +89,9 @@ struct MyBot {
 	};
 	std::vector<AnimationObject> animationObjects;
 
+	// Also take the global transformations
+	std::vector<glm::mat4> globalTransforms;
+
 	glm::mat4 getNodeTransform(const tinygltf::Node& node) {
 		glm::mat4 transform(1.0f);
 
@@ -116,6 +119,9 @@ struct MyBot {
 		// ---------------------------------------
 		// TODO: your code here
 		// ---------------------------------------
+		const tinygltf::Node &node = model.nodes[nodeIndex];
+
+		localTransforms[nodeIndex] = getNodeTransform(node);
 	}
 
 	void computeGlobalNodeTransform(const tinygltf::Model& model,
@@ -126,6 +132,17 @@ struct MyBot {
 		// ----------------------------------------
 		// TODO: your code here
 		// ----------------------------------------
+
+		// Find the global transformations
+		globalTransforms[nodeIndex] = parentTransform * localTransforms[nodeIndex];
+
+		// Now going to the children node
+		const tinygltf::Node &node = model.nodes[nodeIndex];
+		if(!node.children.empty()){
+			for(int childNode: node.children){
+				computeGlobalNodeTransform(model, localTransforms, childNode, globalTransforms[nodeIndex], globalTransforms);
+			}
+		}
 	}
 
 	std::vector<SkinObject> prepareSkinning(const tinygltf::Model &model) {
@@ -162,7 +179,12 @@ struct MyBot {
 			// TODO: your code here to compute joint matrices
 			// ----------------------------------------------
 
+			// computing the joint matrices here
 
+
+			for(int i=0; i<skinObject.jointMatrices.size();i++){
+				skinObject.jointMatrices[i] = skinObject.globalJointTransforms[i] * skinObject.inverseBindMatrices[i];
+			}
 
 
 
@@ -283,7 +305,7 @@ struct MyBot {
 			// ----------------------------------------------------------
 			// TODO: Find a keyframe for getting animation data
 			// ----------------------------------------------------------
-			int keyframeIndex = 0;
+			int keyframeIndex = this->findKeyframeIndex(times, animationTime);
 
 			const unsigned char *outputPtr = &outputBuffer.data[outputBufferView.byteOffset + outputAccessor.byteOffset];
 			const float *outputBuf = reinterpret_cast<const float*>(outputPtr);
@@ -291,23 +313,51 @@ struct MyBot {
 			// -----------------------------------------------------------
 			// TODO: Add interpolation for smooth animation
 			// -----------------------------------------------------------
+
+			float t0 = times[keyframeIndex];
+			float t1 = times[keyframeIndex+1];
+
+			float factor = (animationTime-t1)/(t0-t1);
+
+
 			if (channel.target_path == "translation") {
 				glm::vec3 translation0, translation1;
 				memcpy(&translation0, outputPtr + keyframeIndex * 3 * sizeof(float), 3 * sizeof(float));
+				memcpy(&translation1, outputPtr + (keyframeIndex+1) * 3 * sizeof(float), 3 * sizeof(float));
 
-				glm::vec3 translation = translation0;
+				// glm::vec3 translation = glm::mix(translation0,translation1,factor);
+				glm::vec3 translation;
+				if(sampler.interpolation=="STEP"){
+					translation = translation1;
+				} else if(sampler.interpolation=="LINEAR"){
+					translation = glm::mix(translation0,translation1,factor);
+				}
 				nodeTransforms[targetNodeIndex] = glm::translate(nodeTransforms[targetNodeIndex], translation);
 			} else if (channel.target_path == "rotation") {
 				glm::quat rotation0, rotation1;
 				memcpy(&rotation0, outputPtr + keyframeIndex * 4 * sizeof(float), 4 * sizeof(float));
+				memcpy(&rotation1, outputPtr + (keyframeIndex+1) * 4 * sizeof(float), 4 * sizeof(float));
 
-				glm::quat rotation = rotation0;
+				// glm::quat rotation = rotation0;
+				glm::quat rotation;
+				if(sampler.interpolation=="STEP"){
+					rotation = rotation1;
+				} else if(sampler.interpolation=="LINEAR"){
+					rotation = glm::slerp(rotation0,rotation1,factor);
+				}
 				nodeTransforms[targetNodeIndex] *= glm::mat4_cast(rotation);
 			} else if (channel.target_path == "scale") {
 				glm::vec3 scale0, scale1;
 				memcpy(&scale0, outputPtr + keyframeIndex * 3 * sizeof(float), 3 * sizeof(float));
+				memcpy(&scale1, outputPtr + (keyframeIndex+1) * 3 * sizeof(float), 3 * sizeof(float));
 
-				glm::vec3 scale = scale0;
+				// glm::vec3 scale = glm::mix(scale0,scale1,factor);
+				glm::vec3 scale;
+				if(sampler.interpolation=="STEP"){
+					scale = scale1;
+				} else if(sampler.interpolation=="LINEAR"){
+					scale = glm::mix(scale0,scale1,factor);
+				}
 				nodeTransforms[targetNodeIndex] = glm::scale(nodeTransforms[targetNodeIndex], scale);
 			}
 		}
@@ -322,10 +372,55 @@ struct MyBot {
 	}
 
 	void update(float time) {
+		// Keep the skeleton in T pose for now
 
 		// -------------------------------------------------
 		// TODO: your code here
 		// -------------------------------------------------
+		if (model.animations.size() > 0) {
+			const tinygltf::Animation &animation = model.animations[0];
+			const AnimationObject &animationObject = animationObjects[0];
+
+            const tinygltf::Skin &skin = model.skins[0];
+			std::vector<glm::mat4> nodeTransforms(skin.joints.size());
+			for (size_t i = 0; i < nodeTransforms.size(); ++i) {
+				nodeTransforms[i] = glm::mat4(1.0);
+			}
+
+			updateAnimation(model, animation, animationObject, time, nodeTransforms);
+
+			// ----------------------------------------------
+            // TODO: Recompute global transforms at each node
+			// using the updated node transforms above
+            // ----------------------------------------------
+			// Compute local transforms at each node
+
+			std::vector<glm::mat4> localNodeTransforms(skin.joints.size());
+
+			glm::mat4 parentTransform(1.0f);
+			std::vector<glm::mat4> globalNodeTransforms(skin.joints.size());
+
+			// Compute local transforms at each node
+			for(int i=0;i<skin.joints.size();i++){
+				int rootNodeIndex = skin.joints[i];
+				computeLocalNodeTransform(model, i, localNodeTransforms);
+			}
+
+			// Compute global transforms at each node
+			computeGlobalNodeTransform(model, localNodeTransforms, 24, parentTransform, globalNodeTransforms);
+			globalTransforms = globalNodeTransforms;
+
+			// std::vector<glm::mat4> globalNodeTransforms(skin.joints.size(), glm::mat4(1.0f));
+
+			// // Start from the first joint
+			// int rootNode = skin.joints[0];
+			// // this function is already recursive
+			// computeGlobalNodeTransform(model,nodeTransforms,rootNode,glm::mat4(1.0f),globalNodeTransforms);
+
+			// Update the value for global node transforms
+			globalTransforms = globalNodeTransforms;
+
+		}
 	}
 
 	bool loadModel(tinygltf::Model &model, const char *filename) {
@@ -364,6 +459,25 @@ struct MyBot {
 
 		// Prepare animation data
 		animationObjects = prepareAnimation(model);
+
+		// Initialize the skin
+		const tinygltf::Skin &skin = model.skins[0];
+
+		std::vector<glm::mat4> localNodeTransforms(skin.joints.size());
+
+		glm::mat4 parentTransform(1.0f);
+		std::vector<glm::mat4> globalNodeTransforms(skin.joints.size());
+
+        // Compute local transforms at each node
+		for(int i=0;i<skin.joints.size();i++){
+			int rootNodeIndex = skin.joints[i];
+			computeLocalNodeTransform(model, i, localNodeTransforms);
+		}
+
+		// Compute global transforms at each node
+		computeGlobalNodeTransform(model, localNodeTransforms, 24, parentTransform, globalNodeTransforms);
+		globalTransforms = globalNodeTransforms;
+
 
 		// Create and compile our GLSL program from the shaders
 		programID = LoadShadersFromFile("../lab4/shader/bot.vert", "../lab4/shader/bot.frag");
@@ -529,13 +643,37 @@ struct MyBot {
 		glm::mat4 mvp = cameraMatrix;
 		glUniformMatrix4fv(mvpMatrixID, 1, GL_FALSE, &mvp[0][0]);
 
+		const tinygltf::Skin &skin = model.skins[0];
+
+		std::vector<glm::mat4> localNodeTransforms(skin.joints.size());
+
+		glm::mat4 parentTransform(1.0f);
+		std::vector<glm::mat4> globalNodeTransforms(skin.joints.size());
+
+        // Compute local transforms at each node
+		for(int i=0;i<skin.joints.size();i++){
+			int rootNodeIndex = skin.joints[i];
+			computeLocalNodeTransform(model, i, localNodeTransforms);
+		}
+
+		// Compute global transforms at each node
+		computeGlobalNodeTransform(model, localNodeTransforms, 24, parentTransform, globalNodeTransforms);
+		globalTransforms = globalNodeTransforms;
+
 		// -----------------------------------------------------------------
 		// TODO: Set animation data for linear blend skinning in shader
 		// -----------------------------------------------------------------
 
-
+		// Implement Linear Skin Blending
+		for(int j=0; j<25; j++){
+			skinObjects[0].jointMatrices[j] = glm::inverse(globalTransforms[j]) * skinObjects[0].globalJointTransforms[j] * skinObjects[0].inverseBindMatrices[j];
+		}
+		// for(int x = 0;x<skinObjects.size(); x++){
+		// }
 
 		// -----------------------------------------------------------------
+
+
 
 		// Set light data
 		glUniform3fv(lightPositionID, 1, &lightPosition[0]);

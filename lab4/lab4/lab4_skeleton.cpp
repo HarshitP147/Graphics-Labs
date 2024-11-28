@@ -269,12 +269,6 @@ struct MyBot {
 		std::vector<glm::mat4> &localTransforms)
 	{
 		// TODO: your code here
-		// model.nodes
-		// localTransforms[nodeIndex]
-		glm::vec3 translation;
-		glm::quat rotation;
-		glm::vec3 scale;
-
 		const tinygltf::Node &node = model.nodes[nodeIndex];
 
 		localTransforms[nodeIndex] = getNodeTransform(node);
